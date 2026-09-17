@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 8.0+ 自适应图标。
+  前景层已把杯体缩到 108dp 画布的 86%，落在 72dp 安全区内，
+  因此无论启动器用圆形、方形还是水滴形遮罩，杯子都不会被切到。
+  背景层是与主图同色的纯色，两层拼接处看不出接缝。
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@mipmap/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>

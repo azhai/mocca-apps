@@ -1,0 +1,109 @@
+# 全仓库只有这一个 .gitignore：android/ 与 ios/ 原有的两份已合并进来，
+# 路径统一写成仓库根相对路径，便于集中维护。
+
+# ── 杂项 ───────────────────────────────────────────────
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.sconsign.dblite
+.tags*
+.swiftpm/
+migrate_working_dir/
+
+# ── IDE 与编辑器 ───────────────────────────────────────
+*.iml
+*.ipr
+*.iws
+.codebuddy/
+.idea/
+.fvm/
+Icon?
+
+# .vscode 里的 launch.json / tasks.json 属于个人调试配置，
+# 默认不入库；若团队需要共享调试配置，把下一行注释掉即可。
+#.vscode/
+
+# ── Flutter / Dart / Pub ───────────────────────────────
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# 插件自动生成的代码，不要手工改动也不要入库
+GeneratedPluginRegistrant.java
+/ios/Runner/GeneratedPluginRegistrant.*
+
+# ── Android ────────────────────────────────────────────
+# gradlew、gradlew.bat、gradle/wrapper/gradle-wrapper.jar 故意不忽略：
+# 少了它们，新克隆的仓库拿不到 Gradle wrapper，Android 构建会直接失败。
+/android/.gradle/
+/android/captures/
+/android/local.properties
+/android/build/
+/android/app/build/
+/android/.kotlin/
+/android/app/debug
+/android/app/profile
+/android/app/release
+.cxx/
+
+# ── iOS / Xcode ────────────────────────────────────────
+/ios/build/
+/ios/Flutter/App.framework
+/ios/Flutter/Flutter.framework
+/ios/Flutter/Flutter.podspec
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/ephemeral/
+/ios/Flutter/app.flx
+/ios/Flutter/app.zip
+/ios/Flutter/flutter_assets/
+/ios/Flutter/flutter_export_environment.sh
+/ios/ServiceDefinitions.json
+**/DerivedData/
+**/xcuserdata/
+**/xcshareddata/swiftpm/
+**/Pods/
+**/.symlinks/
+**/.generated/
+**/*sync/
+**/dgph
+**/.vagrant/
+*.xcuserstate
+*.xccheckout
+*.moved-aside
+*.mode1v3
+*.mode2v3
+*.pbxuser
+*.perspectivev3
+profile
+# 上一组规则会误伤 Xcode 的这几个默认模板文件，这里取反放行
+!default.mode1v3
+!default.mode2v3
+!default.pbxuser
+!default.perspectivev3
+
+# ── 签名材料（私钥绝不入库）────────────────────────────
+*.jks
+*.keystore
+key.properties
+
+# ── 构建产物 ───────────────────────────────────────────
+# Makefile 打包后统一复制到这里
+/dist/
+
+# ── 符号表与混淆映射 ───────────────────────────────────
+app.*.symbols
+app.*.map.json
