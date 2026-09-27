@@ -134,16 +134,7 @@ class _HistoryTab extends StatelessWidget {
                 ),
               ],
             ),
-            Expanded(
-              child: ListView.separated(
-                itemCount: records.length,
-                separatorBuilder: (_, _) => const Divider(height: 1, indent: 88),
-                itemBuilder: (context, i) {
-                  final r = records[i];
-                  return _RecordTile(record: r);
-                },
-              ),
-            ),
+            Expanded(child: _HistoryList(records: records)),
           ],
         );
       },
@@ -172,6 +163,53 @@ class _HistoryTab extends StatelessWidget {
   }
 }
 
+/// 按「今天 / 昨天 / 具体日期」分组的观看记录列表。
+class _HistoryList extends StatelessWidget {
+  const _HistoryList({required this.records});
+
+  final List<PlayRecord> records;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    // records 已按最近观看倒序，按自然日切分成有序分组，保持倒序
+    final groups = <({DateTime day, List<PlayRecord> items})>[];
+    for (final r in records) {
+      final day = DateTime(
+        r.updatedAt.year,
+        r.updatedAt.month,
+        r.updatedAt.day,
+      );
+      if (groups.isEmpty || groups.last.day != day) {
+        groups.add((day: day, items: [r]));
+      } else {
+        groups.last.items.add(r);
+      }
+    }
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 8),
+      children: [
+        for (var i = 0; i < groups.length; i++) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+            child: Text(
+              formatDayLabel(groups[i].day),
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.4,
+              ),
+            ),
+          ),
+          for (final r in groups[i].items) _RecordTile(record: r),
+        ],
+      ],
+    );
+  }
+}
+
 class _RecordTile extends StatelessWidget {
   const _RecordTile({required this.record});
 
@@ -186,7 +224,11 @@ class _RecordTile extends StatelessWidget {
 
     return ListTile(
       contentPadding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-      leading: _Thumb(path: record.path, thumb: record.thumb, kind: record.kind),
+      leading: _Thumb(
+        path: record.path,
+        thumb: record.thumb,
+        kind: record.kind,
+      ),
       title: Text(record.name, maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,8 +391,10 @@ class _SavedTab extends StatelessWidget {
             Expanded(
               child: ListView.separated(
                 itemCount: items.length,
-                separatorBuilder: (_, _) => const Divider(height: 1, indent: 88),
-                itemBuilder: (context, i) => _SavedTile(item: items[i], group: group),
+                separatorBuilder: (_, _) =>
+                    const Divider(height: 1, indent: 88),
+                itemBuilder: (context, i) =>
+                    _SavedTile(item: items[i], group: group),
               ),
             ),
           ],
@@ -443,11 +487,7 @@ class _SavedTile extends StatelessWidget {
       ),
       onTap: () => openMedia(
         context,
-        obj: objFromSaved(
-          name: item.name,
-          kind: item.kind,
-          thumb: item.thumb,
-        ),
+        obj: objFromSaved(name: item.name, kind: item.kind, thumb: item.thumb),
         path: item.path,
       ),
     );
@@ -466,10 +506,12 @@ class _Thumb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final url = thumb.isEmpty
-        ? null
-        : AppStore.instance.api.resolveUrl(thumb);
-    // 图片记录可能直接把图片地址存成了缩略图
+    // 后端 `thumb` 恒为空，老记录里可能存着图片地址；为空就按类型现拼封面，
+    // 规则与浏览页共用 ApiClient.coverUrl，历史与目录里的缩略图才长得一样。
+    final api = AppStore.instance.api;
+    final url = thumb.isNotEmpty
+        ? api.resolveUrl(thumb)
+        : api.coverUrl(kind, path);
     final showable = url != null && url.isNotEmpty;
 
     return SizedBox(
@@ -491,15 +533,12 @@ class _Thumb extends StatelessWidget {
 
   Widget _fallback(ThemeData theme) => Container(
     color: theme.colorScheme.surfaceContainerHighest,
-    child: Icon(
-      switch (kind) {
-        MediaKind.video => Icons.movie_outlined,
-        MediaKind.audio => Icons.music_note_outlined,
-        MediaKind.image => Icons.image_outlined,
-        _ => Icons.insert_drive_file_outlined,
-      },
-      color: theme.colorScheme.onSurfaceVariant,
-    ),
+    child: Icon(switch (kind) {
+      MediaKind.video => Icons.movie_outlined,
+      MediaKind.audio => Icons.music_note_outlined,
+      MediaKind.image => Icons.image_outlined,
+      _ => Icons.insert_drive_file_outlined,
+    }, color: theme.colorScheme.onSurfaceVariant),
   );
 }
 

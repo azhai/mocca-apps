@@ -49,18 +49,14 @@ Future<void> openMedia(
 
     final Widget page = switch (kind) {
       MediaKind.image => ImagePage(
-        siblings: siblings.isEmpty
-            ? [(obj: obj, path: path)]
-            : siblings,
+        siblings: siblings.isEmpty ? [(obj: obj, path: path)] : siblings,
         index: siblings.isEmpty ? 0 : siblingIndex,
         initialUrl: url,
         initialHeaders: headers,
         password: password,
       ),
       MediaKind.audio => AudioPage(
-        siblings: siblings.isEmpty
-            ? [(obj: obj, path: path)]
-            : siblings,
+        siblings: siblings.isEmpty ? [(obj: obj, path: path)] : siblings,
         index: siblings.isEmpty ? 0 : siblingIndex,
         initialUrl: url,
         initialHeaders: headers,
@@ -103,10 +99,7 @@ List<({MediaObj obj, String path})> playableSiblings(
 }
 
 /// 在目录中定位某个对象的兄弟索引。
-int indexOfSibling(
-  List<({MediaObj obj, String path})> siblings,
-  String path,
-) {
+int indexOfSibling(List<({MediaObj obj, String path})> siblings, String path) {
   final i = siblings.indexWhere((e) => e.path == path);
   return i < 0 ? 0 : i;
 }

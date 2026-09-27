@@ -17,11 +17,15 @@ VERSION ?= $(shell awk '/^version:/{print $$2; exit}' pubspec.yaml)
 # flutter 在 PATH 里即可；用 fvm / asdf 时可用 `make FLUTTER=fvm\ flutter test` 覆盖
 FLUTTER ?= flutter
 
-# Xcode 构建会继承 shell 里的 CC/CXX/LD/SDKROOT 等变量。若这些变量被指向
-# Homebrew LLVM 或 macOS SDK，xcodebuild（以及 flutter build ios 内部调用的
-# pod）在链接 iOS 目标时会抓错 libobjc，报
-#   "Building for iOS, but linking in dylib built for macOS"
-# 因此 iOS 相关目标统一清掉这几个变量后再执行。
+# 只要涉及原生编译，就必须先清掉这几个变量：它们会被 NDK / Xcode 继承。
+#   Android —— NDK 的 clang 会把 C_INCLUDE_PATH / CPLUS_INCLUDE_PATH 里的
+#              macOS SDK 头文件一起纳入搜索路径，于是 jni 之类的插件在编 C/C++
+#              时直接 `#error Unsupported architecture`（macOS SDK 的
+#              machine/_types.h 不认 aarch64-linux-android）。
+#   iOS     —— xcodebuild 链接时会抓错 libobjc，报
+#              "Building for iOS, but linking in dylib built for macOS"
+# 典型来源：~/.zprofile 里为了让命令行能直接编 C/C++ 而 export 的
+# SDKROOT / CC / CXX / *_INCLUDE_PATH（配合 Homebrew LLVM）。
 ENV_CLEAN = env -u SDKROOT -u C_INCLUDE_PATH -u CPLUS_INCLUDE_PATH -u CPATH \
             -u LIBRARY_PATH -u CC -u CXX -u LD -u LDFLAGS
 
@@ -69,7 +73,7 @@ devices:
 
 # ── 测试 ──────────────────────────────────────────────
 
-## test: 运行全部测试（24 个单测 + 3 个 widget 测试）
+## test: 运行全部测试（44 个单测 + 7 个 widget 测试）
 test:
 	$(FLUTTER) test
 
@@ -82,20 +86,20 @@ test-cover:
 
 ## run: 运行到已连接的设备（可用 `make run d=<deviceId>` 指定设备）
 run:
-	$(FLUTTER) run $(if $(d),-d $(d),)
+	$(ENV_CLEAN) $(FLUTTER) run $(if $(d),-d $(d),)
 
 # ── 打包 ──────────────────────────────────────────────
 
 ## build-apk: 构建 Android APK（arm64-only），产物复制到 dist/
 build-apk:
-	$(FLUTTER) build apk --release
+	$(ENV_CLEAN) $(FLUTTER) build apk --release
 	@mkdir -p $(DIST)
 	@cp $(APK) $(DIST)/$(APP)-$(VERSION)-android-arm64.apk
 	@echo "✅ APK → $(DIST)/$(APP)-$(VERSION)-android-arm64.apk"
 
 ## build-aab: 构建 Android App Bundle（上架 Google Play 用）
 build-aab:
-	$(FLUTTER) build appbundle --release
+	$(ENV_CLEAN) $(FLUTTER) build appbundle --release
 	@mkdir -p $(DIST)
 	@cp $(AAB) $(DIST)/$(APP)-$(VERSION)-android.aab
 	@echo "✅ AAB → $(DIST)/$(APP)-$(VERSION)-android.aab"

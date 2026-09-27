@@ -61,7 +61,10 @@ class _AudioPageState extends State<AudioPage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _stateSub = _player.playerStateStream.listen((s) {
       if (!mounted) return;
-      setState(() => _playing = s.playing && s.processingState != ProcessingState.completed);
+      setState(
+        () => _playing =
+            s.playing && s.processingState != ProcessingState.completed,
+      );
       if (s.processingState == ProcessingState.completed) {
         unawaited(_persist());
         _next(auto: true);
@@ -73,7 +76,9 @@ class _AudioPageState extends State<AudioPage> with WidgetsBindingObserver {
     _player.durationStream.listen((d) {
       if (mounted && d != null) setState(() => _duration = d);
     });
-    unawaited(_load(_index, url: widget.initialUrl, headers: widget.initialHeaders));
+    unawaited(
+      _load(_index, url: widget.initialUrl, headers: widget.initialHeaders),
+    );
   }
 
   @override
@@ -242,7 +247,10 @@ class _AudioPageState extends State<AudioPage> with WidgetsBindingObserver {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildArtwork(theme, cur.obj.thumb),
+                  _buildArtwork(
+                    theme,
+                    AppStore.instance.api.coverUrl(cur.obj.type, cur.path),
+                  ),
                   const SizedBox(height: 28),
                   Text(
                     cur.obj.name,
@@ -285,7 +293,8 @@ class _AudioPageState extends State<AudioPage> with WidgetsBindingObserver {
                     max: maxMs.toDouble(),
                     onChanged: _busy
                         ? null
-                        : (v) => _player.seek(Duration(milliseconds: v.round())),
+                        : (v) =>
+                              _player.seek(Duration(milliseconds: v.round())),
                     onChangeEnd: (_) => unawaited(_persist()),
                   ),
                   Row(
@@ -350,13 +359,11 @@ class _AudioPageState extends State<AudioPage> with WidgetsBindingObserver {
                       const SizedBox(width: 8),
                       IconButton(
                         tooltip: '循环模式',
-                        icon: Icon(
-                          switch (_player.loopMode) {
-                            LoopMode.off => Icons.repeat,
-                            LoopMode.all => Icons.repeat_on,
-                            LoopMode.one => Icons.repeat_one,
-                          },
-                        ),
+                        icon: Icon(switch (_player.loopMode) {
+                          LoopMode.off => Icons.repeat,
+                          LoopMode.all => Icons.repeat_on,
+                          LoopMode.one => Icons.repeat_one,
+                        }),
                         onPressed: () async {
                           final next = switch (_player.loopMode) {
                             LoopMode.off => LoopMode.all,
@@ -401,9 +408,9 @@ class _AudioPageState extends State<AudioPage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildArtwork(ThemeData theme, String thumb) {
+  Widget _buildArtwork(ThemeData theme, String? url) {
     final size = MediaQuery.sizeOf(context).shortestSide.clamp(160.0, 300.0);
-    final url = thumb.isEmpty ? null : AppStore.instance.api.resolveUrl(thumb);
+    final showable = url != null && url.isNotEmpty;
     return Container(
       width: size,
       height: size,
@@ -412,7 +419,7 @@ class _AudioPageState extends State<AudioPage> with WidgetsBindingObserver {
         borderRadius: BorderRadius.circular(24),
       ),
       clipBehavior: Clip.antiAlias,
-      child: url == null
+      child: !showable
           ? Icon(
               Icons.music_note,
               size: size * 0.4,

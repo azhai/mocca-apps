@@ -24,6 +24,7 @@ migrate_working_dir/
 .codebuddy/
 .idea/
 .fvm/
+.trae/
 Icon?
 
 # .vscode 里的 launch.json / tasks.json 属于个人调试配置，

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/api_client.dart';
 import '../core/models.dart';
+import '../core/theme.dart';
 
 /// 全局应用状态：服务器配置、登录会话，以及本地媒体库
 /// （播放记录 / 收藏 / 稍后再看）。
@@ -19,9 +20,13 @@ class AppStore extends ChangeNotifier {
   static const _keyToken = 'mocca.token';
   static const _keyUsername = 'mocca.username';
   static const _keyBasePath = 'mocca.base_path';
+  static const _keyUserId = 'mocca.user_id';
+  static const _keyRole = 'mocca.role';
   static const _keyHistory = 'mocca.history';
   static const _keyFavorites = 'mocca.favorites';
   static const _keyWatchLater = 'mocca.watch_later';
+  static const _keyTheme = 'mocca.theme';
+  static const _keyDanmaku = 'mocca.danmaku_visible';
 
   /// 默认服务器地址。首次启动即用它，无需用户填写。
   static const defaultServerUrl = 'http://mocca.vod:8000';
@@ -30,6 +35,18 @@ class AppStore extends ChangeNotifier {
   static const _maxHistory = 500;
 
   SharedPreferences? _prefs;
+
+  /// 当前配色方案，默认暗色·抹绿。
+  MoccaPalette _palette = MoccaPalette.green;
+
+  /// 当前配色方案。切换见 [setPalette]。
+  MoccaPalette get palette => _palette;
+
+  /// 弹幕是否显示，默认开。播放页的开关与它同步。
+  bool _danmakuVisible = true;
+
+  /// 弹幕显示开关（跨页面、跨次启动沿用）。
+  bool get danmakuVisible => _danmakuVisible;
 
   /// 服务器地址（规范化后，无尾斜杠）。
   String serverUrl = defaultServerUrl;
@@ -42,6 +59,17 @@ class AppStore extends ChangeNotifier {
 
   /// 登录用户专属资源目录（由后端返回，只读展示）。
   String basePath = '/';
+
+  /// 登录用户的 ID（来自 `/api/me`）。
+  ///
+  /// 弹幕与评论用它判断「是不是我发的」——后端只允许删自己的。
+  int userId = 0;
+
+  /// 登录用户的角色：`0` 普通用户 / `1` 游客 / `2` 管理员。
+  int role = 0;
+
+  /// 管理员可以删除任何人的弹幕与评论。
+  bool get isAdmin => role == 2;
 
   late ApiClient api = _buildApi();
 
@@ -63,7 +91,9 @@ class AppStore extends ChangeNotifier {
 
   /// 「继续观看」：有进度、未看完、且非图片的记录。
   List<PlayRecord> get continueWatching => _history
-      .where((r) => r.kind != MediaKind.image && r.durationMs > 0 && !r.isFinished)
+      .where(
+        (r) => r.kind != MediaKind.image && r.durationMs > 0 && !r.isFinished,
+      )
       .toList(growable: false);
 
   /// 按当前配置构建 API 客户端。地址变化时都走这里，避免散落的构造点漏改。
@@ -81,11 +111,15 @@ class AppStore extends ChangeNotifier {
     token = p.getString(_keyToken);
     username = p.getString(_keyUsername) ?? '';
     basePath = p.getString(_keyBasePath) ?? '/';
+    userId = p.getInt(_keyUserId) ?? 0;
+    role = p.getInt(_keyRole) ?? 0;
 
     _history = _decodeList(p.getString(_keyHistory), PlayRecord.fromJson);
     _favorites = _decodeList(p.getString(_keyFavorites), SavedItem.fromJson);
     _watchLater = _decodeList(p.getString(_keyWatchLater), SavedItem.fromJson);
     _sortHistory();
+    _palette = _readPalette(p.getString(_keyTheme));
+    _danmakuVisible = p.getBool(_keyDanmaku) ?? true;
 
     api = _buildApi();
     _ready = true;
@@ -119,6 +153,33 @@ class AppStore extends ChangeNotifier {
     _history.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }
 
+  // ---------------------------------------------------------------- 外观
+
+  /// 从持久化取值解析配色；未知字符串回退到默认（抹绿）。
+  static MoccaPalette _readPalette(String? raw) {
+    if (raw == null) return MoccaPalette.green;
+    for (final p in MoccaPalette.values) {
+      if (p.name == raw) return p;
+    }
+    return MoccaPalette.green;
+  }
+
+  /// 切换配色并持久化。界面上即点即改。
+  Future<void> setPalette(MoccaPalette value) async {
+    if (value == _palette) return;
+    _palette = value;
+    await _prefs?.setString(_keyTheme, value.name);
+    notifyListeners();
+  }
+
+  /// 记住弹幕显示开关，下次进播放页沿用。
+  Future<void> setDanmakuVisible(bool value) async {
+    if (value == _danmakuVisible) return;
+    _danmakuVisible = value;
+    await _prefs?.setBool(_keyDanmaku, value);
+    notifyListeners();
+  }
+
   // ---------------------------------------------------------------- 服务器
 
   /// 保存服务器地址（不校验连通性）。
@@ -145,42 +206,55 @@ class AppStore extends ChangeNotifier {
     api.token = t;
     final session = await api.me();
 
-    token = t;
-    username = session.username;
-    basePath = session.basePath;
-
-    final p = _prefs;
-    await p?.setString(_keyToken, t);
-    await p?.setString(_keyUsername, username);
-    await p?.setString(_keyBasePath, basePath);
-    notifyListeners();
+    await _applySession(t, session);
   }
 
   /// 直接使用管理员令牌（适合只做播放、不需要账号的场景）。
   Future<void> loginWithToken(String t) async {
     api.token = t;
     final session = await api.me();
+    await _applySession(t, session);
+  }
+
+  /// 落地登录结果：内存状态与持久化一起更新。
+  ///
+  /// [Session.id] 要一并存下来：弹幕与评论的「删除」按钮得拿它比对作者。
+  Future<void> _applySession(String t, Session session) {
     token = t;
     username = session.username;
     basePath = session.basePath;
+    userId = session.id;
+    role = session.role;
 
     final p = _prefs;
-    await p?.setString(_keyToken, t);
-    await p?.setString(_keyUsername, username);
-    await p?.setString(_keyBasePath, basePath);
+    final writes = <Future<void>>[
+      if (p != null) p.setString(_keyToken, t),
+      if (p != null) p.setString(_keyUsername, username),
+      if (p != null) p.setString(_keyBasePath, basePath),
+      if (p != null) p.setInt(_keyUserId, userId),
+      if (p != null) p.setInt(_keyRole, role),
+    ];
     notifyListeners();
+    return Future.wait(writes);
   }
 
   Future<void> logout() async {
     token = null;
     username = '';
     basePath = '/';
+    userId = 0;
+    role = 0;
     api.token = null;
     final p = _prefs;
-    await p?.remove(_keyToken);
-    await p?.remove(_keyUsername);
-    await p?.remove(_keyBasePath);
+    final writes = <Future<void>>[
+      if (p != null) p.remove(_keyToken),
+      if (p != null) p.remove(_keyUsername),
+      if (p != null) p.remove(_keyBasePath),
+      if (p != null) p.remove(_keyUserId),
+      if (p != null) p.remove(_keyRole),
+    ];
     notifyListeners();
+    await Future.wait(writes);
   }
 
   // ------------------------------------------------------------ 播放记录

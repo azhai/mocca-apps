@@ -39,12 +39,17 @@ class MediaObj {
     this.sign = '',
     this.thumb = '',
     this.modified,
+    this.isMount = false,
   });
 
   final String name;
   final int size;
   final bool isDir;
   final int type;
+
+  /// 是否为挂载点（存储 / 驱动）。Alist 兼容后端的根目录顶级条目通常是挂载点，
+  /// 用于在界面上与普通目录区分。
+  final bool isMount;
 
   /// 受保护路径才非空；下载时需要拼到 URL 上。
   final String sign;
@@ -59,6 +64,7 @@ class MediaObj {
     sign: (json['sign'] ?? '') as String,
     thumb: (json['thumb'] ?? '') as String,
     modified: DateTime.tryParse((json['modified'] ?? '') as String),
+    isMount: json['mount'] == true,
   );
 }
 
@@ -111,6 +117,8 @@ class Session {
     required this.username,
     required this.role,
     this.basePath = '/',
+    this.id = 0,
+    this.avatar = '',
   });
 
   final String username;
@@ -118,6 +126,15 @@ class Session {
   /// `0` = 普通用户（有账号、需登录、只看自身专属目录）
   /// `1` = 游客　`2` = 运维账号
   final int role;
+
+  /// 用户 ID，来自 `/api/me`。
+  ///
+  /// 弹幕与评论要拿它跟 [SocialEntry.userId] 比对，才能判断「这是不是我发的」
+  /// ——后端只允许删自己的（管理员除外）。
+  final int id;
+
+  /// 头像预设 key（如 `01`），来自 `/api/me`。
+  final String avatar;
 
   /// 专属资源目录：所有文件请求都会被后端拼接到该路径之下。
   final String basePath;
@@ -136,6 +153,8 @@ class Session {
     username: (json['username'] ?? '') as String,
     role: (json['role'] as num?)?.toInt() ?? 0,
     basePath: (json['base_path'] ?? '/') as String,
+    id: (json['id'] as num?)?.toInt() ?? 0,
+    avatar: (json['avatar'] ?? '') as String,
   );
 }
 

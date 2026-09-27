@@ -40,13 +40,16 @@ class MoccaApp extends StatelessWidget {
     return ListenableBuilder(
       listenable: store,
       builder: (context, _) {
-        // 只提供暗色主题：抹茶绿的调性建立在暗底上，亮色下会失去「静」的观感。
+        final palette = store.palette;
         return MaterialApp(
           title: 'Mocca',
           debugShowCheckedModeBanner: false,
-          theme: MoccaTheme.dark(),
-          darkTheme: MoccaTheme.dark(),
-          themeMode: ThemeMode.dark,
+          // 每套配色自带明暗：绿/蓝为暗，紫/杏为浅，切换配色即切换明暗。
+          theme: MoccaTheme.themeOf(palette),
+          darkTheme: MoccaTheme.themeOf(palette),
+          themeMode: palette.brightness == Brightness.dark
+              ? ThemeMode.dark
+              : ThemeMode.light,
           locale: const Locale('zh', 'CN'),
           supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
           localizationsDelegates: const [
@@ -80,21 +83,27 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _index = 0;
 
-  static const _destinations = <({IconData icon, IconData selected, String label})>[
-    (icon: Icons.folder_outlined, selected: Icons.folder, label: '浏览'),
-    (icon: Icons.person_outline, selected: Icons.person, label: '个人'),
-    (icon: Icons.settings_outlined, selected: Icons.settings, label: '设置'),
-  ];
+  static const _destinations =
+      <({IconData icon, IconData selected, String label})>[
+        (icon: Icons.folder_outlined, selected: Icons.folder, label: '浏览'),
+        (icon: Icons.person_outline, selected: Icons.person, label: '个人'),
+        (icon: Icons.settings_outlined, selected: Icons.settings, label: '设置'),
+      ];
 
   @override
   Widget build(BuildContext context) {
     final pages = const [BrowsePage(), LibraryPage(), SettingsPage()];
-    final useRail = Breakpoints.useNavigationRail(MediaQuery.sizeOf(context).width);
+    final useRail = Breakpoints.useNavigationRail(
+      MediaQuery.sizeOf(context).width,
+    );
 
-    if (useRail) {
-      return Scaffold(
-        body: Row(
-          children: [
+    // 两种布局都让 IndexedStack 待在 Row 的同一个位置（最末一个子节点），
+    // 侧栏只在前面增删。这样宽度越过断点时（例如播放视频转横屏再返回）
+    // 各页的元素不会被重建，浏览页的目录、滚动位置与视图模式才能保住。
+    return Scaffold(
+      body: Row(
+        children: [
+          if (useRail) ...[
             NavigationRail(
               selectedIndex: _index,
               onDestinationSelected: (i) => setState(() => _index = i),
@@ -109,28 +118,24 @@ class _AppShellState extends State<AppShell> {
               ],
             ),
             const VerticalDivider(width: 1),
-            Expanded(
-              child: IndexedStack(index: _index, children: pages),
-            ),
           ],
-        ),
-      );
-    }
-
-    return Scaffold(
-      body: IndexedStack(index: _index, children: pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: [
-          for (final d in _destinations)
-            NavigationDestination(
-              icon: Icon(d.icon),
-              selectedIcon: Icon(d.selected),
-              label: d.label,
-            ),
+          Expanded(child: IndexedStack(index: _index, children: pages)),
         ],
       ),
+      bottomNavigationBar: useRail
+          ? null
+          : NavigationBar(
+              selectedIndex: _index,
+              onDestinationSelected: (i) => setState(() => _index = i),
+              destinations: [
+                for (final d in _destinations)
+                  NavigationDestination(
+                    icon: Icon(d.icon),
+                    selectedIcon: Icon(d.selected),
+                    label: d.label,
+                  ),
+              ],
+            ),
     );
   }
 }

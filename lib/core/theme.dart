@@ -1,108 +1,311 @@
 import 'package:flutter/material.dart';
 
-/// Mocca 的暗色主题：抹茶绿为骨、莫奈色为韵。
+/// 四套 Material 3 配色。
 ///
-/// 设计取向说明（避免后续改动时偏航）：
-/// - **暗色唯一**：应用只提供暗色主题（[MoccaTheme.dark]），不做亮色分支。
-/// - **低饱和**：莫奈的印象派用色是「灰调里的彩色」，所以主色不用高饱和绿，
-///   而是往灰里走（如 `#9CC79C` 而非 `#4CAF50`），长时间观看不刺眼。
-/// - **分层靠明度而非阴影**：暗色下阴影几乎不可见，层次由 surface 的
-///   三级明度差（surface / surfaceContainer / surfaceContainerHigh）拉开。
-/// - 通过 [ColorScheme.fromSeed] 生成完整合法的 M3 色板（保证对比度与
-///   「前景/容器」配对不出错），再用 [ColorScheme.copyWith] 覆盖关键角色为
-///   莫奈色，兼顾正确性与调色自由度。
+/// 每套配色自带明暗：绿 / 蓝为暗色系，紫 / 杏为浅色系。切换配色即切换整个应用
+/// 的明暗与主色调（见设置页「外观」区块；无独立的「跟随系统」开关）。
+enum MoccaPalette {
+  green('抹绿', Brightness.dark, _Palettes.green),
+  blue('湛蓝', Brightness.dark, _Palettes.blue),
+  purple('藕紫', Brightness.light, _Palettes.purple),
+  apricot('杏黄', Brightness.light, _Palettes.apricot);
+
+  const MoccaPalette(this.label, this.brightness, this._tokens);
+
+  /// 设置页展示用的名称。
+  final String label;
+
+  /// 该配色对应的明暗模式。
+  final Brightness brightness;
+
+  /// 覆盖后的 M3 关键角色色值。
+  final _PaletteTokens _tokens;
+}
+
+/// 一套配色的 M3 完整角色色值。
+///
+/// 通过 [ColorScheme.fromSeed] 生成合法色板（保证对比度与「前景/容器」配对
+/// 不出错），再用这些色值覆盖关键角色。低饱和、靠明度分层是 Mocca 的既定取向。
+class _PaletteTokens {
+  const _PaletteTokens({
+    required this.seed,
+    required this.primary,
+    required this.onPrimary,
+    required this.primaryContainer,
+    required this.onPrimaryContainer,
+    required this.secondary,
+    required this.onSecondary,
+    required this.secondaryContainer,
+    required this.onSecondaryContainer,
+    required this.tertiary,
+    required this.onTertiary,
+    required this.tertiaryContainer,
+    required this.onTertiaryContainer,
+    required this.error,
+    required this.onError,
+    required this.errorContainer,
+    required this.onErrorContainer,
+    required this.surface,
+    required this.onSurface,
+    required this.onSurfaceVariant,
+    required this.surfaceContainerLowest,
+    required this.surfaceContainerLow,
+    required this.surfaceContainer,
+    required this.surfaceContainerHigh,
+    required this.surfaceContainerHighest,
+    required this.outline,
+    required this.outlineVariant,
+    required this.scrim,
+    required this.inverseSurface,
+    required this.onInverseSurface,
+    required this.inversePrimary,
+  });
+
+  final Color seed;
+  final Color primary;
+  final Color onPrimary;
+  final Color primaryContainer;
+  final Color onPrimaryContainer;
+  final Color secondary;
+  final Color onSecondary;
+  final Color secondaryContainer;
+  final Color onSecondaryContainer;
+  final Color tertiary;
+  final Color onTertiary;
+  final Color tertiaryContainer;
+  final Color onTertiaryContainer;
+  final Color error;
+  final Color onError;
+  final Color errorContainer;
+  final Color onErrorContainer;
+  final Color surface;
+  final Color onSurface;
+  final Color onSurfaceVariant;
+  final Color surfaceContainerLowest;
+  final Color surfaceContainerLow;
+  final Color surfaceContainer;
+  final Color surfaceContainerHigh;
+  final Color surfaceContainerHighest;
+  final Color outline;
+  final Color outlineVariant;
+  final Color scrim;
+  final Color inverseSurface;
+  final Color onInverseSurface;
+  final Color inversePrimary;
+}
+
+/// 四套配色的取值。独立成类是为了让 [MoccaPalette] 枚举保持简洁。
+abstract final class _Palettes {
+  // ----------------------------------------------------------- 暗色·抹绿
+  static const green = _PaletteTokens(
+    seed: Color(0xFF6B8E4E),
+    primary: Color(0xFF9CC79C),
+    onPrimary: Color(0xFF12200F),
+    primaryContainer: Color(0xFF2A3D31),
+    onPrimaryContainer: Color(0xFFC6E4C3),
+    secondary: Color(0xFF92B4BE),
+    onSecondary: Color(0xFF0C1E23),
+    secondaryContainer: Color(0xFF22363C),
+    onSecondaryContainer: Color(0xFFC6E2E9),
+    tertiary: Color(0xFFC3B4D8),
+    onTertiary: Color(0xFF1E1828),
+    tertiaryContainer: Color(0xFF332C40),
+    onTertiaryContainer: Color(0xFFE4DAF4),
+    error: Color(0xFFE4A3A0),
+    onError: Color(0xFF2A1110),
+    errorContainer: Color(0xFF4A2726),
+    onErrorContainer: Color(0xFFF7D5D3),
+    surface: Color(0xFF0E1614),
+    onSurface: Color(0xFFE2EAE3),
+    onSurfaceVariant: Color(0xFFAEBAB2),
+    surfaceContainerLowest: Color(0xFF0A100F),
+    surfaceContainerLow: Color(0xFF16211E),
+    surfaceContainer: Color(0xFF16211E),
+    surfaceContainerHigh: Color(0xFF1D2B27),
+    surfaceContainerHighest: Color(0xFF25352F),
+    outline: Color(0xFF4A5A52),
+    outlineVariant: Color(0xFF2C3A35),
+    scrim: Color(0xFF000000),
+    inverseSurface: Color(0xFFE2EAE3),
+    onInverseSurface: Color(0xFF0E1614),
+    inversePrimary: Color(0xFF416B45),
+  );
+
+  // ----------------------------------------------------------- 暗色·湛蓝
+  static const blue = _PaletteTokens(
+    seed: Color(0xFF4E7B8E),
+    primary: Color(0xFF93B6CB),
+    onPrimary: Color(0xFF0B1A24),
+    primaryContainer: Color(0xFF223A49),
+    onPrimaryContainer: Color(0xFFCBE3F0),
+    secondary: Color(0xFF94C7C7),
+    onSecondary: Color(0xFF0C2121),
+    secondaryContainer: Color(0xFF223A3A),
+    onSecondaryContainer: Color(0xFFCAECEA),
+    tertiary: Color(0xFFB9B0DD),
+    onTertiary: Color(0xFF1E1828),
+    tertiaryContainer: Color(0xFF342C45),
+    onTertiaryContainer: Color(0xFFE4DEF6),
+    error: Color(0xFFE4A3A0),
+    onError: Color(0xFF2A1110),
+    errorContainer: Color(0xFF4A2726),
+    onErrorContainer: Color(0xFFF7D5D3),
+    surface: Color(0xFF0E141C),
+    onSurface: Color(0xFFE2E9EE),
+    onSurfaceVariant: Color(0xFFAEB8C0),
+    surfaceContainerLowest: Color(0xFF0A1016),
+    surfaceContainerLow: Color(0xFF161E26),
+    surfaceContainer: Color(0xFF161E26),
+    surfaceContainerHigh: Color(0xFF1D2730),
+    surfaceContainerHighest: Color(0xFF25303A),
+    outline: Color(0xFF4A5A64),
+    outlineVariant: Color(0xFF2C3A42),
+    scrim: Color(0xFF000000),
+    inverseSurface: Color(0xFFE2E9EE),
+    onInverseSurface: Color(0xFF0E141C),
+    inversePrimary: Color(0xFF35607A),
+  );
+
+  // ----------------------------------------------------------- 浅色·藕紫
+  static const purple = _PaletteTokens(
+    seed: Color(0xFF7A5FA8),
+    primary: Color(0xFF6A4D99),
+    onPrimary: Color(0xFFFFFFFF),
+    primaryContainer: Color(0xFFE9DDFB),
+    onPrimaryContainer: Color(0xFF241539),
+    secondary: Color(0xFF6B6280),
+    onSecondary: Color(0xFFFFFFFF),
+    secondaryContainer: Color(0xFFEDE5FF),
+    onSecondaryContainer: Color(0xFF251A37),
+    tertiary: Color(0xFF82506E),
+    onTertiary: Color(0xFFFFFFFF),
+    tertiaryContainer: Color(0xFFFFD8EC),
+    onTertiaryContainer: Color(0xFF361522),
+    error: Color(0xFFBA1A1A),
+    onError: Color(0xFFFFFFFF),
+    errorContainer: Color(0xFFFFDAD6),
+    onErrorContainer: Color(0xFF410002),
+    surface: Color(0xFFFCF7FF),
+    onSurface: Color(0xFF1C1B21),
+    onSurfaceVariant: Color(0xFF49464F),
+    surfaceContainerLowest: Color(0xFFFFFFFF),
+    surfaceContainerLow: Color(0xFFF6F1FD),
+    surfaceContainer: Color(0xFFF0EAFB),
+    surfaceContainerHigh: Color(0xFFEAE5F5),
+    surfaceContainerHighest: Color(0xFFE4DFEF),
+    outline: Color(0xFF7A7480),
+    outlineVariant: Color(0xFFCBC4D2),
+    scrim: Color(0xFF000000),
+    inverseSurface: Color(0xFF313036),
+    onInverseSurface: Color(0xFFF4EFFB),
+    inversePrimary: Color(0xFFD5BBFF),
+  );
+
+  // ----------------------------------------------------------- 浅色·杏黄
+  static const apricot = _PaletteTokens(
+    seed: Color(0xFFC98A3B),
+    primary: Color(0xFF926400),
+    onPrimary: Color(0xFFFFFFFF),
+    primaryContainer: Color(0xFFFFDDB3),
+    onPrimaryContainer: Color(0xFF2E1B00),
+    secondary: Color(0xFF6F6248),
+    onSecondary: Color(0xFFFFFFFF),
+    secondaryContainer: Color(0xFFF9E6C7),
+    onSecondaryContainer: Color(0xFF261A08),
+    tertiary: Color(0xFF82543A),
+    onTertiary: Color(0xFFFFFFFF),
+    tertiaryContainer: Color(0xFFFFDBC9),
+    onTertiaryContainer: Color(0xFF321305),
+    error: Color(0xFFBA1A1A),
+    onError: Color(0xFFFFFFFF),
+    errorContainer: Color(0xFFFFDAD6),
+    onErrorContainer: Color(0xFF410002),
+    surface: Color(0xFFFFF9F2),
+    onSurface: Color(0xFF211B13),
+    onSurfaceVariant: Color(0xFF4E463B),
+    surfaceContainerLowest: Color(0xFFFFFFFF),
+    surfaceContainerLow: Color(0xFFFCF4EB),
+    surfaceContainer: Color(0xFFF7EEE2),
+    surfaceContainerHigh: Color(0xFFF0E8DC),
+    surfaceContainerHighest: Color(0xFFEBE2D6),
+    outline: Color(0xFF80776A),
+    outlineVariant: Color(0xFFD2C8BA),
+    scrim: Color(0xFF000000),
+    inverseSurface: Color(0xFF373028),
+    onInverseSurface: Color(0xFFFBF7EE),
+    inversePrimary: Color(0xFFFFB95A),
+  );
+}
+
+/// Mocca 的 M3 主题工厂。
+///
+/// 分层靠明度差异由各套配色的 surface 系列色值撑起；组件级样式集中在
+/// [_buildTheme]，一套逻辑同时适配明暗四套配色，避免分叉。
 abstract final class MoccaTheme {
-  /// 种子色（抹茶绿）。仅用于让 fromSeed 推导出合法的默认配对。
-  static const seed = Color(0xFF6B8E4E);
+  // ----------------------------------------------------------- 兼容入口
 
-  // ---------------------------------------------------------------- 莫奈色板
-  //
-  // 取自莫奈《睡莲》与《日本桥》的常用色：雾绿、灰蓝、藕紫、暖砂。
+  /// 旧的单一入口：暗色·抹绿。
+  static ThemeData dark() => themeOf(MoccaPalette.green);
 
-  /// 抹茶绿（主色）：带灰的茶绿。
-  static const _mocca = Color(0xFF9CC79C);
-  static const _moccaDeep = Color(0xFF2A3D31);
-  static const _moccaOn = Color(0xFF12200F);
+  /// 拐角半径：卡片、弹窗等统一圆角。
+  static final BorderRadius _radius = BorderRadius.circular(18);
 
-  /// 莫奈灰蓝（次色）：睡莲池水与晨雾。
-  static const _monetBlue = Color(0xFF92B4BE);
-  static const _monetBlueDeep = Color(0xFF22363C);
-  static const _monetBlueOn = Color(0xFF0C1E23);
+  // ----------------------------------------------------------- 主题构建
 
-  /// 藕紫（第三色）：黄昏水面与鸢尾。
-  static const _irisPurple = Color(0xFFC3B4D8);
-  static const _irisPurpleDeep = Color(0xFF332C40);
-  static const _irisPurpleOn = Color(0xFF1E1828);
+  /// 唯一的主题入口：依据所选配色构建 [ThemeData]。
+  static ThemeData themeOf(MoccaPalette palette) {
+    final scheme = _schemeOf(palette);
+    return _buildTheme(scheme);
+  }
 
-  /// 暖砂（强调）：草垛与石径。
-  static const _sandAccent = Color(0xFFD8C4A0);
-
-  /// 底色：极暗的墨绿黑，比纯黑柔和，能压住长时间的对比疲劳。
-  static const _ink = Color(0xFF0E1614);
-  static const _inkRaised = Color(0xFF16211E);
-  static const _inkHigh = Color(0xFF1D2B27);
-  static const _inkHighest = Color(0xFF25352F);
-  static const _onInk = Color(0xFFE2EAE3);
-  static const _onInkMuted = Color(0xFFAEBAB2);
-
-  /// 柔和的胭脂红，用于错误态（不用刺眼的纯红）。
-  static const _rouge = Color(0xFFE4A3A0);
-  static const _rougeDeep = Color(0xFF4A2726);
-  static const _rougeOn = Color(0xFF2A1110);
-
-  /// 唯一的主题入口。
-  static ThemeData dark() {
+  static ColorScheme _schemeOf(MoccaPalette p) {
+    final t = p._tokens;
     final base = ColorScheme.fromSeed(
-      seedColor: seed,
-      brightness: Brightness.dark,
+      seedColor: t.seed,
+      brightness: p.brightness,
     );
-
-    final scheme = base.copyWith(
-      primary: _mocca,
-      onPrimary: _moccaOn,
-      primaryContainer: _moccaDeep,
-      onPrimaryContainer: const Color(0xFFC6E4C3),
-
-      secondary: _monetBlue,
-      onSecondary: _monetBlueOn,
-      secondaryContainer: _monetBlueDeep,
-      onSecondaryContainer: const Color(0xFFC6E2E9),
-
-      tertiary: _irisPurple,
-      onTertiary: _irisPurpleOn,
-      tertiaryContainer: _irisPurpleDeep,
-      onTertiaryContainer: const Color(0xFFE4DAF4),
-
-      error: _rouge,
-      onError: _rougeOn,
-      errorContainer: _rougeDeep,
-      onErrorContainer: const Color(0xFFF7D5D3),
-
-      surface: _ink,
-      onSurface: _onInk,
-      onSurfaceVariant: _onInkMuted,
-      surfaceContainerLowest: const Color(0xFF0A100F),
-      surfaceContainerLow: _inkRaised,
-      surfaceContainer: _inkRaised,
-      surfaceContainerHigh: _inkHigh,
-      surfaceContainerHighest: _inkHighest,
-
-      // 描边压得很淡：暗色界面里高对比描边会显得「脏」
-      outline: const Color(0xFF4A5A52),
-      outlineVariant: const Color(0xFF2C3A35),
-      scrim: const Color(0xFF000000),
-      inverseSurface: _onInk,
-      onInverseSurface: _ink,
-      inversePrimary: const Color(0xFF416B45),
+    return base.copyWith(
+      primary: t.primary,
+      onPrimary: t.onPrimary,
+      primaryContainer: t.primaryContainer,
+      onPrimaryContainer: t.onPrimaryContainer,
+      secondary: t.secondary,
+      onSecondary: t.onSecondary,
+      secondaryContainer: t.secondaryContainer,
+      onSecondaryContainer: t.onSecondaryContainer,
+      tertiary: t.tertiary,
+      onTertiary: t.onTertiary,
+      tertiaryContainer: t.tertiaryContainer,
+      onTertiaryContainer: t.onTertiaryContainer,
+      error: t.error,
+      onError: t.onError,
+      errorContainer: t.errorContainer,
+      onErrorContainer: t.onErrorContainer,
+      surface: t.surface,
+      onSurface: t.onSurface,
+      onSurfaceVariant: t.onSurfaceVariant,
+      surfaceContainerLowest: t.surfaceContainerLowest,
+      surfaceContainerLow: t.surfaceContainerLow,
+      surfaceContainer: t.surfaceContainer,
+      surfaceContainerHigh: t.surfaceContainerHigh,
+      surfaceContainerHighest: t.surfaceContainerHighest,
+      outline: t.outline,
+      outlineVariant: t.outlineVariant,
+      scrim: t.scrim,
+      inverseSurface: t.inverseSurface,
+      onInverseSurface: t.onInverseSurface,
+      inversePrimary: t.inversePrimary,
     );
+  }
 
-    final radius = BorderRadius.circular(18);
+  /// 组件级主题，随 [ColorScheme] 明暗而自适应。
+  static ThemeData _buildTheme(ColorScheme scheme) {
+    final radius = _radius;
 
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
+      brightness: scheme.brightness,
       colorScheme: scheme,
-      // 暗色下不做 elevation 染色，避免表面泛白
       scaffoldBackgroundColor: scheme.surface,
       splashFactory: InkSparkle.splashFactory,
 
@@ -136,9 +339,7 @@ abstract final class MoccaTheme {
       listTileTheme: ListTileThemeData(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         iconColor: scheme.onSurfaceVariant,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
 
       dividerTheme: DividerThemeData(
@@ -259,9 +460,7 @@ abstract final class MoccaTheme {
         backgroundColor: scheme.surfaceContainerHigh,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),
 
       bottomSheetTheme: BottomSheetThemeData(
@@ -290,9 +489,7 @@ abstract final class MoccaTheme {
         selectedColor: scheme.primaryContainer,
         side: BorderSide(color: scheme.outlineVariant),
         labelStyle: TextStyle(color: scheme.onSurface, fontSize: 12.5),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
 
       sliderTheme: SliderThemeData(
@@ -321,7 +518,6 @@ abstract final class MoccaTheme {
 
       iconTheme: IconThemeData(color: scheme.onSurfaceVariant, size: 22),
 
-      // 统一过渡：淡入 + 轻微上移，比默认的「从右滑入」更贴合静谧的调性
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
@@ -331,7 +527,15 @@ abstract final class MoccaTheme {
     );
   }
 
-  /// 点缀色，供渐变、封面占位等场景使用（不参与 M3 角色映射）。
+  // ------------------------------------------------------- 点缀色（兼容）
+  //
+  // 供渐变、封面占位等不需要参与 M3 角色映射的场景使用；统一取自抹茶绿配色。
+
+  static const _sandAccent = Color(0xFFD8C4A0);
+  static const _mocca = Color(0xFF9CC79C);
+  static const _monetBlue = Color(0xFF92B4BE);
+  static const _irisPurple = Color(0xFFC3B4D8);
+
   static const sand = _sandAccent;
   static const mocca = _mocca;
   static const monetBlue = _monetBlue;
@@ -351,18 +555,72 @@ abstract final class Breakpoints {
   static bool isMedium(double width) => width >= compact && width < expanded;
   static bool isExpanded(double width) => width >= expanded;
 
-  /// 依据可用宽度推荐列表栅格列数（图片墙、卡片列表用）。
-  static int gridColumns(double width) {
-    if (width < 400) return 2;
-    if (width < compact) return 3;
-    if (width < 900) return 4;
-    if (width < 1280) return 6;
-    return 8;
+  /// 依据可用宽度推荐栅格列数（图片墙、卡片列表用）。
+  ///
+  /// 取「格子宽度最接近 [target]」的那一档，而不是死记断点。这样跨宽度变化时
+  /// 格子尺寸始终落在 target 附近的窄区间里，不会出现旧版那种
+  /// 「899dp 时 4 列 208dp、900dp 时 6 列 135dp」的突兀收缩——屏幕稍宽一点
+  /// 就把每一格挤小一半，看起来既拥挤又割裂。
+  ///
+  /// [available] 为扣掉左右外边距后的可用宽度。列数再多也不让格子窄于
+  /// `140dp`——那是两行标题加一行说明还排得开的底线，再窄就只能靠截断文件名
+  /// 凑合，反而更难认。
+  static int gridColumns(
+    double available, {
+    double gutter = 12,
+    double target = 180,
+  }) {
+    const minTile = 140.0;
+    var best = 2;
+    var bestDelta = double.infinity;
+    for (var c = 2; c <= 12; c++) {
+      final tile = (available - gutter * (c - 1)) / c;
+      if (tile < minTile) break;
+      final delta = (tile - target).abs();
+      if (delta < bestDelta) {
+        bestDelta = delta;
+        best = c;
+      }
+    }
+    return best;
+  }
+
+  /// 按屏幕宽度算出一整套自洽的网格横向尺寸（列数 / 格宽 / 间距 / 外边距）。
+  ///
+  /// 间距与外边距随断点放大：小屏紧凑省地方，大屏留白舒展。格高不在这里——
+  /// 它取决于卡片里的字号行高，由使用方按自己的排版常量接着算。
+  static GridSpec gridSpec(double width) {
+    final compact = width < Breakpoints.compact;
+    final gutter = compact ? 8.0 : (width < expanded ? 12.0 : 16.0);
+    final margin = compact ? 10.0 : (width < expanded ? 16.0 : 24.0);
+    final available = width - margin * 2;
+    // 小屏目标格宽略小：手机上宁可多一列，也别让每格大到一屏只剩两个卡片。
+    final columns = gridColumns(
+      available,
+      gutter: gutter,
+      target: compact ? 165 : 185,
+    );
+    return (
+      columns: columns,
+      tileWidth: (available - gutter * (columns - 1)) / columns,
+      gutter: gutter,
+      margin: margin,
+    );
   }
 
   /// 手机用底部导航栏，平板 / 大屏用侧边导航轨道。
   static bool useNavigationRail(double width) => width >= compact;
 }
+
+/// 网格的横向排版：列数、格宽、间距、外边距。
+///
+/// 格宽由「可用宽度 - 全部间距」整除得出，因此每行刚好铺满、不残留半格空隙。
+typedef GridSpec = ({
+  int columns,
+  double tileWidth,
+  double gutter,
+  double margin,
+});
 
 /// 在任意位置取到当前宽度对应的断点判断。
 extension BreakpointContext on BuildContext {

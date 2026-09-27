@@ -42,6 +42,18 @@ String formatRelative(DateTime? time) {
 
 String _two(int v) => v.toString().padLeft(2, '0');
 
+/// 按自然日生成分组标题：`今天` / `昨天` / `M月d日`，跨年补 `yyyy年`。
+String formatDayLabel(DateTime day) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final day0 = DateTime(day.year, day.month, day.day);
+  final diff = today.difference(day0).inDays;
+  if (diff == 0) return '今天';
+  if (diff == 1) return '昨天';
+  final base = '${day.month}月${day.day}日';
+  return day.year == now.year ? base : '${day.year}年$base';
+}
+
 /// 根据文件名后缀粗略判断媒体类型。
 ///
 /// 仅在后端未给出可靠 `type` 时作为兜底；正常情况下应使用后端返回的 `type`。
@@ -49,9 +61,29 @@ int guessKindFromName(String name) {
   final dot = name.lastIndexOf('.');
   if (dot < 0 || dot == name.length - 1) return 1;
   final ext = name.substring(dot + 1).toLowerCase();
-  const videos = {'mp4', 'mkv', 'mov', 'avi', 'webm', 'm4v', 'ts', 'flv', 'wmv'};
+  const videos = {
+    'mp4',
+    'mkv',
+    'mov',
+    'avi',
+    'webm',
+    'm4v',
+    'ts',
+    'flv',
+    'wmv',
+  };
   const audios = {'mp3', 'flac', 'wav', 'aac', 'm4a', 'ogg', 'opus', 'wma'};
-  const images = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'heic', 'heif', 'avif'};
+  const images = {
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'webp',
+    'bmp',
+    'heic',
+    'heif',
+    'avif',
+  };
   if (videos.contains(ext)) return 2;
   if (audios.contains(ext)) return 3;
   if (images.contains(ext)) return 5;

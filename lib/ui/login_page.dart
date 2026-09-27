@@ -75,9 +75,7 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(
-            _mode == _AuthMode.register ? '注册成功，已自动登录' : '已登录',
-          ),
+          content: Text(_mode == _AuthMode.register ? '注册成功，已自动登录' : '已登录'),
         ),
       );
       // 从设置 / 个人页推入的，登录成功即返回

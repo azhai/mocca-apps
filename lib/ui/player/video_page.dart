@@ -7,7 +7,10 @@ import 'package:video_player/video_player.dart';
 import '../../core/api_client.dart';
 import '../../core/format.dart';
 import '../../core/models.dart';
+import '../../data/social_store.dart';
 import '../../data/store.dart';
+import '../widgets/danmaku_layer.dart';
+import '../widgets/social_sheet.dart';
 
 /// MP4 视频播放页。
 ///
@@ -69,6 +72,22 @@ class _VideoPageState extends State<VideoPage> with WidgetsBindingObserver {
   /// 选集面板是否展开。
   bool _showPlaylist = false;
 
+  /// 当前视频的弹幕与评论。切集时重建——弹幕按内容指纹锚定，换一个视频就是
+  /// 另一份数据，复用只会串台。
+  SocialStore? _social;
+
+  /// [_social] 与弹幕开关合并后的监听器：任一变化都要重画弹幕层。
+  Listenable? _socialListenable;
+
+  /// 播放位置与播放状态。用 [ValueNotifier] 传给弹幕层，让它在内部自己监听，
+  /// 不必每帧带着整棵播放页重建。
+  final ValueNotifier<int> _position = ValueNotifier(0);
+  final ValueNotifier<bool> _playing = ValueNotifier(false);
+
+  /// 弹幕是否显示。与评论面板里的开关是同一份状态，并与 [AppStore] 同步：
+  /// 初始值取自本地，改动后落盘，下次进播放页沿用（见 [initState]）。
+  late final ValueNotifier<bool> _danmakuVisible;
+
   // —— 当前正在播放的项（切换选集时会变化）——
   late String _curPath;
   late String _curTitle;
@@ -97,13 +116,39 @@ class _VideoPageState extends State<VideoPage> with WidgetsBindingObserver {
     _curHeaders = widget.headers;
     _curThumb = widget.thumb;
     _curIndex = widget.index;
+    // 沿用上次的弹幕开关；值一变就落盘。监听挂在这里而不是按钮回调里：
+    // 评论面板标题栏的 Switch 改的是同一个 notifier，只有监听才能覆盖两条路径。
+    _danmakuVisible = ValueNotifier(AppStore.instance.danmakuVisible)
+      ..addListener(_persistDanmakuVisible);
+    _attachSocial();
     _loadCurrent();
   }
+
+  /// 绑定当前视频的弹幕 / 评论数据源。
+  void _attachSocial() {
+    final old = _social;
+    _social = null;
+    _socialListenable = null;
+    old?.dispose();
+
+    final social = SocialStore(path: _curPath, api: AppStore.instance.api);
+    _social = social;
+    _socialListenable = Listenable.merge([social, _danmakuVisible]);
+    unawaited(social.load());
+  }
+
+  /// 弹幕开关变化时落盘，下次进播放页沿用。
+  void _persistDanmakuVisible() =>
+      unawaited(AppStore.instance.setDanmakuVisible(_danmakuVisible.value));
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _ticker?.cancel();
+    _social?.dispose();
+    _position.dispose();
+    _playing.dispose();
+    _danmakuVisible.dispose();
     // 先落盘再销毁控制器：此时 position 仍然可读
     unawaited(_persist());
     _controller?.dispose();
@@ -255,6 +300,7 @@ class _VideoPageState extends State<VideoPage> with WidgetsBindingObserver {
             : widget.siblings[index].obj.thumb;
         _showPlaylist = false;
       });
+      _attachSocial();
       await _loadCurrent();
     } catch (e) {
       if (!mounted) return;
@@ -265,11 +311,32 @@ class _VideoPageState extends State<VideoPage> with WidgetsBindingObserver {
   void _onControllerUpdate() {
     final v = _controller?.value;
     if (v == null || !mounted) return;
+    // 弹幕层靠这两个值驱动：位置决定投放哪几条，播放状态决定要不要冻结
+    if (v.isInitialized) {
+      _position.value = v.position.inMilliseconds;
+      _playing.value = v.isPlaying;
+    }
     // 播放结束后再落一次盘，让记录显示为「已看完」
     if (v.isInitialized && v.position >= v.duration && _ticker != null) {
       unawaited(_persist());
     }
     setState(() {});
+  }
+
+  /// 打开弹幕 / 评论面板。
+  Future<void> _openSocial() async {
+    final social = _social;
+    if (social == null) return;
+    await showSocialSheet(
+      context,
+      store: social,
+      position: _position,
+      danmakuVisible: _danmakuVisible,
+      onSeek: (ms) async {
+        await _controller?.seekTo(Duration(milliseconds: ms));
+        if (mounted) setState(() {});
+      },
+    );
   }
 
   /// 把当前位置与本次新增观看时长写入历史。
@@ -337,6 +404,17 @@ class _VideoPageState extends State<VideoPage> with WidgetsBindingObserver {
         ),
         title: Text(_curTitle, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
+          // 弹幕开关：原先挤在底部控制栏里不好找，移到顶部
+          ValueListenableBuilder<bool>(
+            valueListenable: _danmakuVisible,
+            builder: (context, visible, _) => IconButton(
+              tooltip: visible ? '隐藏弹幕' : '显示弹幕',
+              icon: Icon(
+                visible ? Icons.subtitles : Icons.subtitles_off_outlined,
+              ),
+              onPressed: () => _danmakuVisible.value = !visible,
+            ),
+          ),
           IconButton(
             tooltip: _isLandscape ? '切换为竖屏' : '切换为横屏',
             icon: Icon(
@@ -410,7 +488,24 @@ class _VideoPageState extends State<VideoPage> with WidgetsBindingObserver {
                   Center(
                     child: AspectRatio(
                       aspectRatio: _controller!.value.aspectRatio,
-                      child: VideoPlayer(_controller!),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          VideoPlayer(_controller!),
+                          // 弹幕限定在画面内：跟着 AspectRatio 走，竖屏片源
+                          // 的上下黑边里就不会飘字。
+                          if (_social != null && _socialListenable != null)
+                            ListenableBuilder(
+                              listenable: _socialListenable!,
+                              builder: (context, _) => DanmakuLayer(
+                                entries: _social!.danmaku,
+                                position: _position,
+                                playing: _playing,
+                                visible: _danmakuVisible.value,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                   if (_controlsVisible) _buildControls(context),
@@ -575,6 +670,27 @@ class _VideoPageState extends State<VideoPage> with WidgetsBindingObserver {
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
                         ),
+                      // 评论入口留在控制栏（弹幕开关已移到顶部 AppBar）。
+                      //
+                      // 高度必须压到 36 —— 这一行原本由「选集」按钮撑到 36，
+                      // 换成默认 IconButton（最小触控区 48）会把整条底部栏顶高，
+                      // 进而压进选集面板预留的 [_bottomBarHeight] 让位区。
+                      // IconButton 的 constraints 压不住内置触控区，只能在外面
+                      // 用 SizedBox 给紧约束。
+                      SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: IconButton(
+                          tooltip: '弹幕与评论',
+                          iconSize: 20,
+                          padding: EdgeInsets.zero,
+                          icon: const Icon(
+                            Icons.chat_bubble_outline,
+                            color: Colors.white70,
+                          ),
+                          onPressed: _openSocial,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),

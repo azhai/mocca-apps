@@ -76,18 +76,12 @@ void main() {
 
     test('子路径部署：后端已带前缀，不应重复拼接', () {
       final api = ApiClient(baseUrl: 'http://host:5244/nas');
-      expect(
-        api.resolveUrl('/nas/d/a.mp4'),
-        'http://host:5244/nas/d/a.mp4',
-      );
+      expect(api.resolveUrl('/nas/d/a.mp4'), 'http://host:5244/nas/d/a.mp4');
     });
 
     test('相对路径按 base 解析', () {
       final api = ApiClient(baseUrl: 'http://host:5244/nas');
-      expect(
-        api.resolveUrl('d/a.mp4'),
-        'http://host:5244/nas/d/a.mp4',
-      );
+      expect(api.resolveUrl('d/a.mp4'), 'http://host:5244/nas/d/a.mp4');
     });
 
     test('空串返回空', () {

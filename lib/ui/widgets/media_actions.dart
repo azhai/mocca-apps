@@ -14,13 +14,7 @@ MediaObj objFromSaved({
   required String name,
   required int kind,
   String thumb = '',
-}) => MediaObj(
-  name: name,
-  size: 0,
-  isDir: false,
-  type: kind,
-  thumb: thumb,
-);
+}) => MediaObj(name: name, size: 0, isDir: false, type: kind, thumb: thumb);
 
 /// 「收藏 / 稍后再看 / 从头播放」等操作的列表项集合。
 ///
@@ -48,20 +42,13 @@ class MediaActions extends StatelessWidget {
     Future<void> toggle(SavedGroup group, BuildContext ctx) async {
       final nowSaved = await store.toggle(
         group,
-        SavedItem(
-          path: path,
-          name: obj.name,
-          kind: obj.type,
-          thumb: obj.thumb,
-        ),
+        SavedItem(path: path, name: obj.name, kind: obj.type, thumb: obj.thumb),
       );
       if (!ctx.mounted) return;
       Navigator.of(ctx).maybePop();
       ScaffoldMessenger.of(ctx).showSnackBar(
         SnackBar(
-          content: Text(
-            nowSaved ? '已加入${group.label}' : '已从${group.label}移除',
-          ),
+          content: Text(nowSaved ? '已加入${group.label}' : '已从${group.label}移除'),
         ),
       );
     }
@@ -79,7 +66,9 @@ class MediaActions extends StatelessWidget {
             },
           ),
         ListTile(
-          leading: Icon(marks.favorite ? Icons.favorite : Icons.favorite_border),
+          leading: Icon(
+            marks.favorite ? Icons.favorite : Icons.favorite_border,
+          ),
           title: Text(marks.favorite ? '取消收藏' : '收藏'),
           onTap: () => toggle(SavedGroup.favorite, context),
         ),
@@ -99,9 +88,9 @@ class MediaActions extends StatelessWidget {
               await store.resetProgress(path);
               if (!context.mounted) return;
               Navigator.of(context).maybePop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('已清除播放进度，下次将从头播放')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('已清除播放进度，下次将从头播放')));
             },
           ),
       ],
